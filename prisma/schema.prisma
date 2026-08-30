@@ -1,0 +1,40 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/// Une candidature suivie. Matchée sur gmailThreadId pour rattacher les
+/// réponses (confirmation, refus, entretien...) au même enregistrement.
+model Application {
+  id            Int               @id @default(autoincrement())
+  company       String
+  role          String?
+  platform      String?
+  appliedAt     DateTime?
+  status        ApplicationStatus @default(APPLIED)
+  gmailThreadId String            @unique
+  lastEventAt   DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+/// Ligne unique (id = 1) contenant le refresh token OAuth2 Gmail,
+/// écrite par `npm run gmail:auth`.
+model GmailToken {
+  id           Int      @id @default(autoincrement())
+  refreshToken String   @db.Text
+  scope        String?  @db.Text
+  updatedAt    DateTime @updatedAt
+}
+
+enum ApplicationStatus {
+  APPLIED // valeur par défaut, non produite par la classification
+  CONFIRMED // CONFIRMATION_CANDIDATURE
+  REJECTED // REFUS
+  INTERVIEW // ENTRETIEN
+  INFO_REQUESTED // DEMANDE_INFO
+  OTHER // AUTRE
+}
