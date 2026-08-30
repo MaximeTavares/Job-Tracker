@@ -1,98 +1,111 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# job-tracker
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Service NestJS **one-shot** (pas de serveur permanent) qui, à chaque exécution :
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+1. lit les nouveaux emails de l'INBOX Gmail (API Gmail, OAuth2) ;
+2. classe chaque email avec l'API Claude (Anthropic) — `CONFIRMATION_CANDIDATURE`,
+   `REFUS`, `ENTRETIEN`, `DEMANDE_INFO`, `AUTRE` — et en extrait `company` / `role` /
+   `platform` ;
+3. `upsert` une ligne `Application` en MySQL (Prisma), matchée sur `gmailThreadId` ;
+4. pose le label Gmail `JobTracker/Traité` sur **tout** email traité (marqueur
+   « déjà vu » pour les runs suivants) et retire `INBOX` (archive) uniquement pour
+   `CONFIRMATION_CANDIDATURE` et `REFUS` ;
+5. envoie **un seul** résumé de run (embed) vers un webhook Discord.
 
-## Description
+Aucun état applicatif entre les runs : les labels Gmail + la base font foi.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Stack
 
-## Project setup
+- NestJS 11 (contexte applicatif standalone, lancé en one-shot)
+- Prisma 7 + `@prisma/client` + driver adapter `@prisma/adapter-mariadb` (MySQL)
+- `googleapis` (Gmail API), `@anthropic-ai/sdk` (classification, modèle `claude-haiku-4-5`)
 
-```bash
-$ npm install
-```
+## Modules
 
-## Compile and run the project
+| Module                 | Rôle                                                        |
+| ---------------------- | ---------------------------------------------------------- |
+| `PrismaModule`         | `PrismaService` (connexion via adapter mariadb)            |
+| `GmailModule`          | OAuth2 + lecture / labels / archivage                      |
+| `ClassificationModule` | appel Claude, sortie structurée via outil `record_classification` |
+| `DiscordModule`        | envoi de l'embed résumé                                     |
+| `SyncModule`           | `SyncService.run()` — orchestration du pipeline            |
 
-```bash
-# development
-$ npm run start
+## Mise en route
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+### 1. Dépendances
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 2. Configuration
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cp .env.example .env
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Puis renseigner `.env` :
 
-## Resources
+- `DATABASE_URL` — MySQL (`mysql://user:pass@host:3306/job_tracker`)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — client OAuth
+  **Web application** créé dans Google Cloud Console (Gmail API activée). Écran de
+  consentement à publier **« In production »** sinon le refresh token expire au bout
+  de 7 jours. Redirect URI par défaut : `http://localhost:3000/oauth2callback`.
+- `ANTHROPIC_API_KEY` — clé API Anthropic (`CLASSIFICATION_MODEL` optionnel)
+- `DISCORD_WEBHOOK_URL` — optionnel (sans lui, le résumé est seulement loggé)
 
-Check out a few resources that may come in handy when working with NestJS:
+### 3. Base de données
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npm run db:migrate -- --name init   # crée les tables Application + GmailToken
+```
 
-## Support
+### 4. Autorisation Gmail (une seule fois)
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run gmail:auth
+```
 
-## Stay in touch
+Ouvre l'URL affichée, autorise l'accès : le refresh token est enregistré dans la
+table `GmailToken` (ligne `id = 1`).
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Exécution
 
-## License
+```bash
+npm run job:sync        # build + run one-shot
+npm run job:sync:dev    # run direct via ts-node (dev)
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Windows Task Scheduler (via WSL)
+
+Programme : `wsl.exe`
+Arguments :
+
+```
+-d <distro> --cd /home/tmaxim/projects/job-tracker -- bash -lc "npm run job:sync"
+```
+
+Fréquence : 2-3 fois par jour. Le script sort avec le code `1` en cas d'échec.
+
+## Visualiser les données
+
+```bash
+npm run db:studio       # Prisma Studio
+```
+
+## Tests
+
+```bash
+npm test
+```
+
+Tests unitaires ciblés : parsing de la sortie Claude (`ClassificationService`) et
+orchestration (`SyncService` — archivage conditionnel, upsert par `gmailThreadId`,
+tolérance aux erreurs par email).
+
+## Notes
+
+- **Prisma 7** : pas d'`url` dans `schema.prisma` (elle vit dans `prisma.config.ts`)
+  et la connexion runtime passe par un **driver adapter** (`PrismaMariaDb`).
+- Matching des candidatures **uniquement** sur `gmailThreadId` : un email de refus
+  arrivant dans un nouveau thread crée une 2ᵉ ligne `Application` (limitation assumée).
