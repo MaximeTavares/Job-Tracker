@@ -56,7 +56,8 @@ cp .env.example .env
 
 Puis renseigner `.env` :
 
-- `DATABASE_URL` — MySQL (`mysql://user:pass@host:3306/job_tracker`)
+- `DATABASE_URL` — MySQL (valeur par défaut alignée sur `docker-compose.yml`,
+  voir étape suivante)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — client OAuth
   **Web application** créé dans Google Cloud Console (Gmail API activée). Écran de
   consentement à publier **« In production »** sinon le refresh token expire au bout
@@ -68,6 +69,7 @@ Puis renseigner `.env` :
 ### 3. Base de données
 
 ```bash
+docker compose up -d                # démarre MySQL (job-tracker-mysql, port 3307)
 npm run db:migrate -- --name init   # crée les tables Application + GmailToken
 ```
 
