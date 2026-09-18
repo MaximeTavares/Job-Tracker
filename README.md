@@ -2,10 +2,10 @@
 
 Suivi de candidatures. Deux entrypoints indépendants :
 
-- **Pipeline one-shot** (`job.ts`) — à chaque exécution :
+**Pipeline** (`job.ts`) - à chaque exécution :
   1. lit les nouveaux emails de l'INBOX Gmail (API Gmail, OAuth2) ;
-  2. classe chaque email avec l'API Claude (Anthropic) — `CONFIRMATION_CANDIDATURE`,
-     `REFUS`, `ENTRETIEN`, `DEMANDE_INFO`, `AUTRE` — et en extrait `company` / `role` /
+  2. classe chaque email avec l'API Claude (Anthropic) - `CONFIRMATION_CANDIDATURE`,
+     `REFUS`, `ENTRETIEN`, `DEMANDE_INFO`, `AUTRE` - et en extrait `company` / `role` /
      `platform` ;
   3. `upsert` une ligne `Application` en MySQL (Prisma), matchée sur `gmailThreadId`
      (`AUTRE` n'est jamais persisté, pour ne pas polluer la base) ;
@@ -13,7 +13,8 @@ Suivi de candidatures. Deux entrypoints indépendants :
      « déjà vu » pour les runs suivants) et retire `INBOX` (archive) uniquement pour
      `CONFIRMATION_CANDIDATURE` et `REFUS` ;
   5. envoie **un seul** résumé de run (embed) vers un webhook Discord.
-- **Dashboard** (`main.ts` + `client/`) — serveur HTTP + SPA React en
+
+**Dashboard** (`main.ts` + `client/`) - serveur HTTP + SPA React en
   lecture/édition sur les candidatures déjà en base, avec un bouton pour
   déclencher le pipeline one-shot depuis l'UI. Voir [Dashboard](#dashboard).
 
@@ -36,7 +37,7 @@ font foi.
 | `GmailModule`          | OAuth2 + lecture / labels / archivage                      |
 | `ClassificationModule` | appel Claude, sortie structurée via outil `record_classification` |
 | `DiscordModule`        | envoi de l'embed résumé                                     |
-| `SyncModule`           | `SyncService.run()` — orchestration du pipeline            |
+| `SyncModule`           | `SyncService.run()` - orchestration du pipeline            |
 | `ApplicationsModule`   | API du dashboard (lecture, stats, édition, suppression)     |
 | `SyncTriggerModule`    | déclenche le pipeline en sous-processus depuis le dashboard |
 
@@ -56,15 +57,15 @@ cp .env.example .env
 
 Puis renseigner `.env` :
 
-- `DATABASE_URL` — MySQL (valeur par défaut alignée sur `docker-compose.yml`,
+- `DATABASE_URL` - MySQL (valeur par défaut alignée sur `docker-compose.yml`,
   voir étape suivante)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — client OAuth
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` - client OAuth
   **Web application** créé dans Google Cloud Console (Gmail API activée). Écran de
   consentement à publier **« In production »** sinon le refresh token expire au bout
   de 7 jours. Redirect URI par défaut : `http://localhost:3000/oauth2callback`.
-- `ANTHROPIC_API_KEY` — clé API Anthropic (`CLASSIFICATION_MODEL` optionnel)
-- `DISCORD_WEBHOOK_URL` — optionnel (sans lui, le résumé est seulement loggé)
-- `DASHBOARD_PORT` — optionnel, défaut `3001` (serveur du dashboard)
+- `ANTHROPIC_API_KEY` - clé API Anthropic (`CLASSIFICATION_MODEL` optionnel)
+- `DISCORD_WEBHOOK_URL` - optionnel (sans lui, le résumé est seulement loggé)
+- `DASHBOARD_PORT` - optionnel, défaut `3001` (serveur du dashboard)
 
 ### 3. Base de données
 
@@ -129,7 +130,7 @@ npm test
 ```
 
 Tests unitaires ciblés : parsing de la sortie Claude (`ClassificationService`),
-orchestration (`SyncService` — archivage conditionnel, upsert par
+orchestration (`SyncService` - archivage conditionnel, upsert par
 `gmailThreadId`, tolérance aux erreurs par email, exclusion des emails
 `AUTRE`), et l'API du dashboard (`ApplicationsService`/`ApplicationsController`).
 
