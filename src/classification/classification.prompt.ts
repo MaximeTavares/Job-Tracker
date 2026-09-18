@@ -1,5 +1,4 @@
 /**
- * PLACEHOLDER — à remplacer par le prompt de classification fourni.
  *
  * Le prompt doit demander une classification en 5 catégories + l'extraction de
  * `company`, `role`, `platform`. Le format de sortie est imposé côté code via un
@@ -21,8 +20,8 @@ Catégories possibles :
 - DEMANDE_INFO : demande de complément (disponibilités, documents, test technique)
 - AUTRE : tout le reste (newsletter, spam, mail sans rapport avec une candidature)
 
-Si l'email ne concerne clairement pas une candidature, category = "AUTRE" et les 
-autres champs à null sauf summary.
+Si l'email ne concerne clairement pas une candidature, category = "AUTRE" et les
+autres champs à null.
 
 Exemples :
 
@@ -32,7 +31,7 @@ Objet: Votre candidature a été envoyée à Doctolib
 Corps: Bonjour Maxime, votre candidature pour le poste de Développeur Fullstack 
 chez Doctolib a bien été transmise...
 
-{"category":"CONFIRMATION_CANDIDATURE","company":"Doctolib","role":"Développeur Fullstack","platform":"LinkedIn","confidence":"high","summary":"Confirmation d'envoi de candidature chez Doctolib pour un poste de développeur fullstack."}
+{"category":"CONFIRMATION_CANDIDATURE","company":"Doctolib","role":"Développeur Fullstack","platform":"LinkedIn","confidence":"high"}
 
 ---
 Expéditeur: recrutement@acme-startup.fr
@@ -40,7 +39,7 @@ Objet: Votre candidature chez Acme
 Corps: Bonjour, nous vous remercions de l'intérêt porté à Acme. Après étude de 
 votre profil, nous avons décidé de ne pas donner suite à votre candidature...
 
-{"category":"REFUS","company":"Acme","role":null,"platform":null,"confidence":"high","summary":"Refus d'Acme après étude du profil, poste non précisé."}
+{"category":"REFUS","company":"Acme","role":null,"platform":null,"confidence":"high"}
 
 ---
 Expéditeur: sophie.martin@techcorp.com
@@ -48,4 +47,4 @@ Objet: Suite à votre candidature - échange téléphonique ?
 Corps: Bonjour Maxime, votre profil nous intéresse pour le poste de dev backend. 
 Seriez-vous disponible pour un échange cette semaine ?
 
-{"category":"ENTRETIEN","company":"TechCorp","role":"dev backend","platform":null,"confidence":"high","summary":"TechCorp propose un échange téléphonique pour le poste de développeur backend."}`;
+{"category":"ENTRETIEN","company":"TechCorp","role":"dev backend","platform":null,"confidence":"high"}`;
