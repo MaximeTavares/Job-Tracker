@@ -46,27 +46,31 @@ export class SyncService {
         const eventAt = email.date;
         const company = result.company || UNKNOWN_COMPANY;
 
-        await this.prisma.application.upsert({
-          where: { gmailThreadId: ref.threadId },
-          create: {
-            company,
-            role: result.role,
-            platform: result.platform,
-            appliedAt: eventAt,
-            status,
-            gmailThreadId: ref.threadId,
-            lastEventAt: eventAt,
-          },
-          update: {
-            status,
-            lastEventAt: eventAt,
-            // On ne réécrit que ce que Claude a effectivement extrait,
-            // pour ne pas écraser une saisie manuelle dans Prisma Studio.
-            ...(result.company ? { company: result.company } : {}),
-            ...(result.role ? { role: result.role } : {}),
-            ...(result.platform ? { platform: result.platform } : {}),
-          },
-        });
+        // AUTRE = "ne concerne clairement pas une candidature" (cf. prompt) :
+        // ne pas polluer la base, l'email reste seulement marqué traité.
+        if (result.category !== 'AUTRE') {
+          await this.prisma.application.upsert({
+            where: { gmailThreadId: ref.threadId },
+            create: {
+              company,
+              role: result.role,
+              platform: result.platform,
+              appliedAt: eventAt,
+              status,
+              gmailThreadId: ref.threadId,
+              lastEventAt: eventAt,
+            },
+            update: {
+              status,
+              lastEventAt: eventAt,
+              // On ne réécrit que ce que Claude a effectivement extrait,
+              // pour ne pas écraser une saisie manuelle dans Prisma Studio.
+              ...(result.company ? { company: result.company } : {}),
+              ...(result.role ? { role: result.role } : {}),
+              ...(result.platform ? { platform: result.platform } : {}),
+            },
+          });
+        }
 
         const archive = ARCHIVED_CATEGORIES.has(result.category);
         await this.gmail.markProcessed(ref.id, { labelId, archive });

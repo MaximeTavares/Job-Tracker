@@ -14,7 +14,7 @@ model Application {
   role          String?
   platform      String?
   appliedAt     DateTime?
-  status        ApplicationStatus @default(APPLIED)
+  status        ApplicationStatus @default(CONFIRMED)
   gmailThreadId String            @unique
   lastEventAt   DateTime          @default(now())
   createdAt     DateTime          @default(now())
@@ -31,7 +31,6 @@ model GmailToken {
 }
 
 enum ApplicationStatus {
-  APPLIED // valeur par défaut, non produite par la classification
   CONFIRMED // CONFIRMATION_CANDIDATURE
   REJECTED // REFUS
   INTERVIEW // ENTRETIEN

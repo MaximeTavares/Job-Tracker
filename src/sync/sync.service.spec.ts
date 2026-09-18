@@ -153,6 +153,27 @@ describe('SyncService', () => {
     expect(discord.sendRunSummary).toHaveBeenCalledTimes(1);
   });
 
+  it('ne persiste pas les emails classés AUTRE, mais les compte et les marque traités', async () => {
+    gmail.listInboxToProcess.mockResolvedValue([{ id: 'm1', threadId: 't1' }]);
+    gmail.getEmail.mockResolvedValue(mkEmail({ id: 'm1', threadId: 't1' }));
+    classification.classify.mockResolvedValue({
+      category: 'AUTRE',
+      company: '',
+      role: null,
+      platform: null,
+      confidence: 'low',
+    });
+
+    const summary = await service.run();
+
+    expect(prisma.application.upsert).not.toHaveBeenCalled();
+    expect(summary.scanned).toBe(1);
+    expect(gmail.markProcessed).toHaveBeenCalledWith('m1', {
+      labelId: 'LBL',
+      archive: false,
+    });
+  });
+
   it('ignore un email vide, le marque traité sans archiver, sans appeler Claude', async () => {
     gmail.listInboxToProcess.mockResolvedValue([{ id: 'm1', threadId: 't1' }]);
     gmail.getEmail.mockResolvedValue(mkEmail({ subject: '   ', body: '' }));
